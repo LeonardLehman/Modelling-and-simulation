@@ -5,11 +5,17 @@ from pyics import Model
 
 def decimal_to_base_k(n, k):
     """Converts a given decimal (i.e. base-10 integer) to a list containing the
-    base-k equivalant.
+    base-k equivalant.  
 
     For example, for n=34 and k=3 this function should return [1, 0, 2, 1]."""
+    result = []
+    
+    while n > 0:
+        remainder = n % k
+        result.insert(0, remainder)
+        n //= k
 
-    return ...
+    return result
 
 
 class CASim(Model):
@@ -40,8 +46,17 @@ class CASim(Model):
         For example, for rule=34, k=3, r=1 this function should set rule_set to
         [0, ..., 0, 1, 0, 2, 1] (length 27). This means that for example
         [2, 2, 2] -> 0 and [0, 0, 1] -> 2."""
+        rule_set = []
+        max_rule = self.k ** (2 * self.r + 1)
 
-        self.rule_set = ...
+        while len(rule_set) < max_rule:
+            rule_set.append(0)
+
+        base_k = decimal_to_base_k(self.rule, self.k)
+        rule_set[-len(base_k):] = base_k
+
+        print(rule_set)
+        self.rule_set = rule_set
 
     def check_rule(self, inp):
         """Returns the new state based on the input states.
@@ -49,13 +64,20 @@ class CASim(Model):
         The input state will be an array of 2r+1 items between 0 and k, the
         neighbourhood which the state of the new cell depends on."""
 
-        return ...
+        index = 0
+        for i in range(len(inp)):
+            index += inp[i] * (self.k ** i)
+
+        new_state = self.rule_set[int(index)]
+        print(new_state)
+        return new_state
+
 
     def setup_initial_row(self):
         """Returns an array of length `width' with the initial state for each of
         the cells in the first row. Values should be between 0 and k."""
-
-        return np.zeros(self.width)
+        initial_row = np.random.randint(0, self.k, size=self.width)
+        return initial_row
 
     def reset(self):
         """Initializes the configuration of the cells and converts the entered
