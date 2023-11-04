@@ -1,4 +1,5 @@
 import numpy as np
+import itertools
 
 from pyics import Model
 
@@ -46,15 +47,26 @@ class CASim(Model):
         For example, for rule=34, k=3, r=1 this function should set rule_set to
         [0, ..., 0, 1, 0, 2, 1] (length 27). This means that for example
         [2, 2, 2] -> 0 and [0, 0, 1] -> 2."""
-        rule_set = []
+        
+        
+        rules = []
         max_rule = self.k ** (2 * self.r + 1)
 
-        while len(rule_set) < max_rule:
-            rule_set.append(0)
+        while len(rules) < max_rule:
+            rules.append(0)
 
         base_k = decimal_to_base_k(self.rule, self.k)
-        rule_set[-len(base_k):] = base_k
+        rules[-len(base_k):] = base_k
 
+        print(rules)
+        
+        states = list(range(self.k))
+        beginning_states = list(itertools.product(states, repeat=2*self.r + 1))
+        rule_set = {}
+
+        for i, beginning_state in enumerate(beginning_states):
+            rule_set[beginning_state] = rules[i]
+        
         print(rule_set)
         self.rule_set = rule_set
 
@@ -63,20 +75,27 @@ class CASim(Model):
 
         The input state will be an array of 2r+1 items between 0 and k, the
         neighbourhood which the state of the new cell depends on."""
-
+        """
         index = 0
         for i in range(len(inp)):
             index += inp[i] * (self.k ** i)
 
         new_state = self.rule_set[int(index)]
         print(new_state)
-        return new_state
+        """
+        print(inp)
+    
+        return self.rule_set.get(tuple(inp), 0)
+
 
 
     def setup_initial_row(self):
         """Returns an array of length `width' with the initial state for each of
         the cells in the first row. Values should be between 0 and k."""
-        initial_row = np.random.randint(0, self.k, size=self.width)
+        #initial_row = np.random.randint(0, self.k, size=self.width)
+        initial_row = np.zeros(self.width, dtype=int)
+        initial_row[self.width // 2] = 1
+
         return initial_row
 
     def reset(self):
