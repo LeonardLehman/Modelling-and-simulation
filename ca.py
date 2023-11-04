@@ -61,7 +61,7 @@ class CASim(Model):
         print(rules)
         
         states = list(range(self.k))
-        beginning_states = list(itertools.product(states, repeat=2*self.r + 1))
+        beginning_states = reversed(list(itertools.product(states, repeat=2*self.r + 1)))
         rule_set = {}
 
         for i, beginning_state in enumerate(beginning_states):
