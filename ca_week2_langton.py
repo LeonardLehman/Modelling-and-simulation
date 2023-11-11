@@ -229,7 +229,7 @@ def find_average_cycle_length(num_rules, num_iterations, num_steps, width, langt
 
 if __name__ == '__main__':
     num_rules = 255
-    num_iterations = 10
+    num_iterations = 100
     num_steps = 50
     width = 10
 
@@ -294,7 +294,12 @@ if __name__ == '__main__':
     plt.legend()
     plt.grid()
 
-    plt.text(0.5, -0.2, f'Width = {width}, steps = {num_steps}, lambdas = {lambda_values}, rule table method is {rule_table_method}. The entropy is calculated per configuration. Precise entropy values are printed in the terminal.', horizontalalignment='center', verticalalignment='center', transform=plt.gca().transAxes)
-
+    plt.text(
+        0.5, -0.2,
+        f'Width = {width}, steps = {num_steps}, lambdas = {lambda_values}, rule table method is {rule_table_method}. '
+        f'The entropy is calculated per configuration. Precise entropy values are printed in the terminal.\n'
+        f'In the figure about cycles, you can see that lambda 0.3 makes them repetitive, lambda 0.1 is the no change, and lambda 0.5 makes the CA too random to almost ever cycle.',
+        horizontalalignment='center', verticalalignment='center', transform=plt.gca().transAxes, multialignment='left'
+    )
     
     plt.show()
