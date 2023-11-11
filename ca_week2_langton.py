@@ -49,11 +49,6 @@ class CASim(Model):
     
     # langtons implementation start
 
-    def setter_rule(self, val):
-        rule_set_size = self.k ** (2 * self.r + 1)
-        max_rule_number = self.k ** rule_set_size
-        return max(0, min(val, max_rule_number - 1))
-
     def setter_rule_table_method(self, val):
         methods = ['table_walk_through', 'random_table']
         return val if val in methods else 'table_walk_through'
@@ -90,7 +85,6 @@ class CASim(Model):
         if self.rule_table_method == 'table_walk_through':
             rules = []
             max_rule = self.k ** (2 * self.r + 1)
-
             while len(rules) < max_rule:
                 rules.append(0)
 
@@ -119,7 +113,10 @@ class CASim(Model):
             beginning_states = reversed(list(itertools.product(states, repeat=2 * self.r + 1)))
 
             for i, beginning_state in enumerate(beginning_states):
-                rule_set[beginning_state] = base_k[i]
+                if i < len(base_k):
+                    rule_set[beginning_state] = base_k[i]
+                else:
+                    rule_set[beginning_state] = 0
 
             self.rule_set = rule_set
 
@@ -194,7 +191,7 @@ def generate_rule_tables_from_lambda(lambda_values, num_rules, num_iterations, n
     return rule_tables
 
 def find_average_cycle_length(num_rules, num_iterations, num_steps, width, langton_lambda=None, method='table_walk_through'):
-    average_length_dic = {}  # Use a dictionary to store results for each rule
+    average_length_dic = {}
 
     for rule in range(num_rules + 1):
         cycle_lengths = []
@@ -202,7 +199,7 @@ def find_average_cycle_length(num_rules, num_iterations, num_steps, width, langt
         for iteration in range(num_iterations):
             sim = CASim()
             sim.height = num_steps
-            sim.width = width  # Set width here
+            sim.width = width
             sim.reset()
 
             if langton_lambda is not None:
@@ -231,22 +228,26 @@ def find_average_cycle_length(num_rules, num_iterations, num_steps, width, langt
     return average_length_dic
 
 if __name__ == '__main__':
-    num_rules = 256
+    num_rules = 255
     num_iterations = 10
-    num_steps = 100
+    num_steps = 50
     width = 10
 
-    lambda_values = [0.1, 0.3, 0.5]
-    rule_table_method = 'table_walk_through'  # or 'random_table'
+    lambda_values = [0.1, 0.2, 0.3, 0.5]
+    rule_table_method = 'table_walk_through'  # 'table_walk_through' or 'random_table'
 
     average_lengths = find_average_cycle_length(num_rules, num_iterations, num_steps, width)
     
     rule_tables = generate_rule_tables_from_lambda(lambda_values, num_rules, num_iterations, num_steps, width, method=rule_table_method)
+    entropy_values_by_lambda = {}
 
     for langton_lambda, average_lengths in rule_tables.items():
         print(f"Langton lambda: {langton_lambda}")
         print(f"Rule table method: {rule_table_method}")
         print("Rule\tAverage steps\tLowest steps")
+        
+        entropy_values = []
+        
         for rule, cycle_lengths in average_lengths.items():
             avg_steps = sum(cycle_lengths) / num_iterations
             lowest_steps = min(cycle_lengths)
@@ -262,9 +263,13 @@ if __name__ == '__main__':
             sim.rule = rule
             
             entropy = sim.calculate_entropy(sim.config)
+            entropy_values.append(entropy)
 
             print(f"{rule}\t{avg_steps:.2f}\t{lowest_steps}\t{entropy:.4f}")
 
+        entropy_values_by_lambda[langton_lambda] = entropy_values
+
+        plt.subplot(2, 1, 1)
         x_values = []
         y_values = []
 
@@ -279,4 +284,17 @@ if __name__ == '__main__':
     plt.title(f'CA cycle length of {num_rules} rules tested within {num_steps} steps, width = {width}')
     plt.legend()
     plt.grid()
+
+    plt.subplot(2, 1, 2)
+    for langton_lambda, entropy_values in entropy_values_by_lambda.items():
+        plt.plot(range(0, num_rules + 1), entropy_values, label=f"Lambda={langton_lambda}")
+    plt.xlabel('Rule number')
+    plt.ylabel('Entropy')
+    plt.title('Entropy values for different rules')
+    plt.legend()
+    plt.grid()
+
+    plt.text(0.5, -0.2, f'Width = {width}, steps = {num_steps}, lambdas = {lambda_values}, rule table method is {rule_table_method}. The entropy is calculated per configuration. Precise entropy values are printed in the terminal.', horizontalalignment='center', verticalalignment='center', transform=plt.gca().transAxes)
+
+    
     plt.show()
