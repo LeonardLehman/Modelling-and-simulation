@@ -4,26 +4,28 @@ import malaria_visualize
 
 
 class Model:
-    def __init__(self, width=50, height=50, nHuman=400, nMosquito=200,
-                 initMosquitoHungry=0.5, initHumanInfected=0.2,
-                 humanInfectionProb=0.25, mosquitoInfectionProb=0.9,
-                 biteProb=1.0, mosquito_net_coverage=0.8, antimalarial_drug_coverage=0.4,
-                 antimalarial_drug_effectiveness=0.8):
+    def __init__(self, params):
         """
         Model parameters
         Initialize the model with the width and height parameters.
         """
-        self.height = height
-        self.width = width
-        self.nHuman = nHuman
-        self.nMosquito = nMosquito
-        self.humanInfectionProb = humanInfectionProb
-        self.mosquitoInfectionProb = mosquitoInfectionProb
-        self.biteProb = biteProb
+        self.height = params.get('height', 50)
+        self.width = params.get('width', 50)
+        self.nHuman = params.get('nHuman', 400)
+        self.nMosquito = params.get('nMosquito', 200)
+        self.humanInfectionProb = params.get('humanInfectionProb', 0.25)
+        self.mosquitoInfectionProb = params.get('mosquitoInfectionProb', 0.9)
+        self.biteProb = params.get('biteProb', 1.0)
+        
 
-        self.mosquitoNetCoverage = mosquito_net_coverage
-        self.antimalarialDrugCoverage = antimalarial_drug_coverage
-        self.antimalarialDrugEffectiveness = antimalarial_drug_effectiveness
+        self.mosquitoNetCoverage = params.get('mosquito_net_coverage', 0.8)
+        self.antimalarialDrugCoverage = params.get('antimalarial_drug_coverage', 0.4)
+        self.antimalarialDrugEffectiveness = params.get('antimalarial_drug_effectiveness', 0.8)
+
+        vaccinationCoverage = params.get('vaccinationCoverage', 0) # Vaccination coverage parameter
+        initMosquitoHungry = params.get('initMosquitoHungry', 0.5)
+        initHumanInfected = params.get('initHumanInfected', 0.2)
+
         # etc.
 
         """
@@ -39,10 +41,10 @@ class Model:
         Population setters
         Make a data structure in this case a list with the humans and mosquitos.
         """
-        self.humanPopulation = self.set_human_population(initHumanInfected)
+        self.humanPopulation = self.set_human_population(initHumanInfected, vaccinationCoverage)
         self.mosquitoPopulation = self.set_mosquito_population(initMosquitoHungry)
 
-    def set_human_population(self, initHumanInfected):
+    def set_human_population(self, initHumanInfected, vaccinationCoverage):
         """
         This function makes the initial human population, by iteratively adding
         an object of the Human class to the humanPopulation list.
@@ -66,7 +68,11 @@ class Model:
             if (i / self.nHuman) <= initHumanInfected:
                 state = 'I'  # I for infected
             else:
-                state = 'S'  # S for susceptible
+                # Check if the human is immune based on vaccination coverage
+                if np.random.uniform() <= vaccinationCoverage:
+                    state = 'R'  # R for immune
+                else:
+                    state = 'S'  # S for susceptible
             humanPopulation.append(Human(x, y, state))
 
         return humanPopulation
@@ -117,6 +123,7 @@ class Model:
         new_death_count = 0
 
         for j, h in enumerate(self.humanPopulation):
+
             # Check if a human gets infected and update their state
             if h.state == 'S':
                 for m in self.mosquitoPopulation:
@@ -227,6 +234,24 @@ if __name__ == '__main__':
     """
     Simulation parameters
     """
+    simulation_params = {
+        'width': 80,
+        'height': 80,
+        'nHuman': 400,
+        'nMosquito': 200,
+        'initMosquitoHungry': 0.5,
+        'initHumanInfected': 0.2,
+        'humanInfectionProb': 0.25,
+        'mosquitoInfectionProb': 0.9,
+        'biteProb': 1,
+        'mosquito_net_coverage': 0.8,
+        'antimalarial_drug_coverage': 0.4,
+        'antimalarial_drug_effectiveness': 0.8,
+        'vaccinationCoverage': 0
+
+        # parameters here
+    }
+
     fileName = 'malaria_simulation'
     timeSteps = 100
     t = 0
@@ -235,8 +260,14 @@ if __name__ == '__main__':
     Run a simulation for an indicated number of timesteps.
     """
     file = open(fileName + '.csv', 'w')
-    sim = Model()
+    sim = Model(simulation_params)
     vis = malaria_visualize.Visualization(sim.height, sim.width)
+
+    sim.width=80
+    sim.height=80
+    sim.nHuman=400,
+    sim.nMosquito=200
+
     print('Starting simulation')
     while t < timeSteps:
         [d1, d2] = sim.update()  # Catch the data
@@ -244,6 +275,7 @@ if __name__ == '__main__':
         file.write(line)  # Write the data to a .csv file
         vis.update(t, sim.mosquitoPopulation, sim.humanPopulation)
         t += 1
+
     file.close()
     vis.persist()
 
