@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import malaria_visualize
+import os
 
 
 class Model:
@@ -114,7 +116,7 @@ class Model:
                         # Reduce the probability of bite if under a net
                         if np.random.uniform() <= self.biteProb * 0.1:  # Hypothetical reduction rate
                             m.bite(h, self.humanInfectionProb, self.mosquitoInfectionProb)
-                            self.bitesThroughNet += 1  # Increment bites through net counter
+                            self.bitesThroughNet += 1  # Bite through net encounter but not necesarily successful
                     else:
                         m.bite(h, self.humanInfectionProb, self.mosquitoInfectionProb)
             m.update_hunger_state()
@@ -140,8 +142,8 @@ class Model:
                             new_infected_count += 1  # Increment infected count
                             break  # Stop checking for infections after the first infected mosquito
             elif h.state == 'I':
-                # Check if a human gets treated and update their state
-                if np.random.uniform() <= 0.01:
+                # Check if a human gets treated and update their state since malaria takes 14 days to treat usually
+                if np.random.uniform() <= 0.07:
                     
                     if np.random.uniform() <= 0.5:
                         h.state = 'R'  # R for immune
@@ -149,9 +151,11 @@ class Model:
                         h.state = 'S'  # Successfully treated, move to susceptible state
                     new_infected_count -= 1  # Increment treated count
                 
-                elif np.random.uniform() <= 0.02:
+                # Check if a human dies based on that 14 days to not treat
+                elif np.random.uniform() <= 0.07:
                     del self.humanPopulation[j]
                     new_death_count += 1
+                    new_infected_count -= 1 
                     x = np.random.randint(self.width)
                     y = np.random.randint(self.height)
                     state = 'S'  # New human starts as susceptible
@@ -249,59 +253,65 @@ class Human:
 
 
 if __name__ == '__main__':
-    """
-    Simulation parameters
-    """
-    simulation_params = {
-        'width': 50,
-        'height': 50,
-        'nHuman': 672,
-        'nMosquito': 1000,
-        'initMosquitoHungry': 0.5,
-        'initHumanInfected': 0.001,
-        'humanInfectionProb': 0.25,
-        'mosquitoInfectionProb': 0.9,   
-        'biteProb': 1,
-        'mosquito_net_coverage': 0.8,
-        'antimalarial_drug_coverage': 0.4,
-        'antimalarial_drug_effectiveness': 0.8,
-        'vaccinationCoverage': 0
+    vaccination_coverages = np.arange(0, 1.1, 0.1)
+    plotData = True
+    current_directory = os.getcwd()
 
-        # parameters here
-    }
 
-    fileName = 'malaria_simulation'
-    timeSteps = 100
-    t = 0
-    plotData = False
-    """
-    Run a simulation for an indicated number of timesteps.
-    """
-    file = open(fileName + '.csv', 'w')
-    sim = Model(simulation_params)
-    vis = malaria_visualize.Visualization(sim.height, sim.width)
+    for coverage in vaccination_coverages:
+        simulation_params = {
+            'width': 50,
+            'height': 50,
+            'nHuman': 672,
+            'nMosquito': 1000,
+            'initMosquitoHungry': 0.5,
+            'initHumanInfected': 0.008,
+            'humanInfectionProb': 0.25,
+            'mosquitoInfectionProb': 0.9,   
+            'biteProb': 1,
+            'mosquito_net_coverage': 0.8,
+            'antimalarial_drug_coverage': 0.4,
+            'antimalarial_drug_effectiveness': 0.8,
+            'vaccinationCoverage': coverage
+            # parameters here
+        }
 
-    print('Starting simulation')
-    while t < timeSteps:
-        [d1, d2] = sim.update()  # Catch the data
-        line = f"{t},{d1},{d2},{sim.bitesThroughNet}\n"  # Separate the data with commas
-        file.write(line)  # Write the data to a .csv file
-        vis.update(t, sim.mosquitoPopulation, sim.humanPopulation)
-        t += 1
+        fileName = 'malaria_simulation'
+        timeSteps = 400
+        t = 0
+        
+        """
+        Run a simulation for an indicated number of timesteps.
+        """
+        fileName = os.path.join(current_directory, f'malaria_simulation_coverage{round(coverage, 1)}.csv')
+        file = open(fileName, 'w')
+        sim = Model(simulation_params)
 
-    file.close()
-    vis.persist()
+        print(f'Starting simulation coverage {round(coverage, 1)}')
+        while t < timeSteps:
+            [d1, d2] = sim.update()  # Catch the data
+            line = f"{t},{d1},{d2},{sim.bitesThroughNet}\n"  # Separate the data with commas
+            file.write(line)  # Write the data to a .csv file
+            t += 1
+        print('Finishing simulation')
+        file.close()
+    
+    df = pd.DataFrame()
 
+    for coverage in vaccination_coverages:
+        fileName = f'malaria_simulation_coverage{round(coverage, 1)}.csv'
+
+        data = pd.read_csv(fileName, names=['Time', 'Infected', 'Deaths', 'BitesThroughNet'])
+        final_death_count = data['Deaths'].iloc[-1]  # Get the final death count
+        df = df.append({'VaccinationCoverage': coverage, 'FinalDeaths': final_death_count}, ignore_index=True)
+
+    # Plotting the final number of deaths per vaccination coverage
     if plotData:
-        """
-        Make a plot by from the stored simulation data.
-        """
-        data = np.loadtxt(fileName+'.csv', delimiter=',')
-        time = data[:, 0]
-        infectedCount = data[:, 1]
-        deathCount = data[:, 2]
-        plt.figure()
-        plt.plot(time, infectedCount, label='infected')
-        plt.plot(time, deathCount, label='deaths')
-        plt.legend()
+        plt.figure(figsize=(10, 6))
+        plt.plot(df['VaccinationCoverage'], df['FinalDeaths'], marker='o')
+        
+        plt.title('Final Number of Deaths for Different Vaccination Coverages')
+        plt.xlabel('Vaccination Coverage')
+        plt.ylabel('Final Deaths')
+        plt.grid(True)
         plt.show()
