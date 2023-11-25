@@ -139,9 +139,27 @@ class Model:
                             h.state = 'I'
                             new_infected_count += 1  # Increment infected count
                             break  # Stop checking for infections after the first infected mosquito
-
-            # Check if a human dies based on probability taken from malaria death rate in Africa
-            if np.random.uniform() < 0.0003:
+            elif h.state == 'I':
+                # Check if a human gets treated and update their state
+                if np.random.uniform() <= 0.01:
+                    
+                    if np.random.uniform() <= 0.5:
+                        h.state = 'R'  # R for immune
+                    else:
+                        h.state = 'S'  # Successfully treated, move to susceptible state
+                    new_infected_count -= 1  # Increment treated count
+                
+                elif np.random.uniform() <= 0.02:
+                    del self.humanPopulation[j]
+                    new_death_count += 1
+                    x = np.random.randint(self.width)
+                    y = np.random.randint(self.height)
+                    state = 'S'  # New human starts as susceptible
+                    self.humanPopulation.append(Human(x, y, state))
+                
+            
+            # Check if a human dies based on random probability
+            if np.random.uniform() < 0.0001:
                 # Remove the dead human from the population
                 del self.humanPopulation[j]
                 new_death_count += 1  # Increment death count
@@ -150,7 +168,7 @@ class Model:
                 y = np.random.randint(self.height)
                 state = 'S'  # New human starts as susceptible
                 self.humanPopulation.append(Human(x, y, state))
-
+            
         # Update the total counts
         self.infectedCount += new_infected_count
         self.deathCount += new_death_count
@@ -235,14 +253,14 @@ if __name__ == '__main__':
     Simulation parameters
     """
     simulation_params = {
-        'width': 80,
-        'height': 80,
-        'nHuman': 400,
-        'nMosquito': 200,
+        'width': 50,
+        'height': 50,
+        'nHuman': 672,
+        'nMosquito': 1000,
         'initMosquitoHungry': 0.5,
-        'initHumanInfected': 0.2,
+        'initHumanInfected': 0.001,
         'humanInfectionProb': 0.25,
-        'mosquitoInfectionProb': 0.9,
+        'mosquitoInfectionProb': 0.9,   
         'biteProb': 1,
         'mosquito_net_coverage': 0.8,
         'antimalarial_drug_coverage': 0.4,
@@ -262,11 +280,6 @@ if __name__ == '__main__':
     file = open(fileName + '.csv', 'w')
     sim = Model(simulation_params)
     vis = malaria_visualize.Visualization(sim.height, sim.width)
-
-    sim.width=80
-    sim.height=80
-    sim.nHuman=400,
-    sim.nMosquito=200
 
     print('Starting simulation')
     while t < timeSteps:
